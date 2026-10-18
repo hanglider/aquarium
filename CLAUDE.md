@@ -127,6 +127,7 @@ CodeQL и Dependabot решили не подключать.
 2. `git checkout dev && git pull` → `git checkout -b feature/<N>-<кратко>`.
 3. Пишешь код небольшими осмысленными коммитами, с тестами на логику `internal/sim`.
 4. Проверки, `git push -u origin <ветка>`.
-5. Открываешь PR (заголовок в формате Conventional Commits, `Closes #N`), ждёшь зелёный CI,
+5. Открываешь PR (заголовок в формате Conventional Commits, `Closes #N`, метка как у issue —
+   по ней PR попадёт в нужный раздел changelog), ждёшь зелёный CI,
    мержишь squash'ем с удалением ветки.
 6. Коротко отчитываешься человеку и берёшь следующую задачу.

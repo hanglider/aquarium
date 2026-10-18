@@ -120,29 +120,44 @@ func run(ctx context.Context, w *sim.World, seed uint64, speed int, rec *stats.C
 
 	tick := time.NewTicker(time.Second / time.Duration(speed))
 	defer tick.Stop()
-	steps := tick.C
 
+	step := func() error {
+		w.Step()
+		return rec.Row(w)
+	}
+	paused := false
 	for {
-		render.Frame(scr, w, seed)
-		if len(w.Fish) == 0 {
-			render.Notice(scr, w, fmt.Sprintf("Все рыбы умерли на шаге %d. Выход — q.", w.Steps))
-			steps = nil // из nil-канала ничего не придёт: симуляция стоит, ждём выхода
+		status, steps := "пробел — пауза  q — выход", tick.C
+		// Из nil-канала ничего не придёт: пока он стоит в select, симуляция не идёт.
+		switch {
+		case len(w.Fish) == 0:
+			status, steps = fmt.Sprintf("Все рыбы умерли на шаге %d. Выход — q.", w.Steps), nil
+		case paused:
+			status, steps = "пауза: пробел — продолжить  n — шаг  q — выход", nil
 		}
+		render.Frame(scr, w, seed, status)
+
 		select {
 		case <-ctx.Done():
 			return nil
 		case ev := <-events:
 			switch ev := ev.(type) {
 			case *tcell.EventKey:
-				if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC || ev.Rune() == 'q' {
+				switch {
+				case ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC || ev.Rune() == 'q':
 					return nil
+				case ev.Rune() == ' ':
+					paused = !paused
+				case ev.Rune() == 'n' && paused && len(w.Fish) > 0:
+					if err := step(); err != nil {
+						return err
+					}
 				}
 			case *tcell.EventResize:
 				scr.Sync()
 			}
 		case <-steps:
-			w.Step()
-			if err := rec.Row(w); err != nil {
+			if err := step(); err != nil {
 				return err
 			}
 		}

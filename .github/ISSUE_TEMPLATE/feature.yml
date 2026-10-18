@@ -1,0 +1,26 @@
+name: Фича
+description: Новая возможность симулятора
+labels: [feature]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что сделать
+      description: Какое поведение должно появиться.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Критерии готовности
+      description: Как понять, что задача выполнена.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Заметки
+      description: Идеи по реализации, ссылки, ограничения.

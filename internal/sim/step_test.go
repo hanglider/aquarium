@@ -10,7 +10,7 @@ func tiny(energy int) *World {
 	cfg := DefaultConfig()
 	cfg.Width, cfg.Height = 1, 1
 	cfg.Fish, cfg.Food = 1, 0
-	cfg.FoodChance = 0
+	cfg.FoodRate = 0
 	cfg.StartEnergy = energy
 	return New(cfg)
 }
@@ -56,7 +56,7 @@ func TestStepBounds(t *testing.T) {
 
 func TestStepFoodSpawn(t *testing.T) {
 	w := tiny(10)
-	w.cfg.FoodChance = 1
+	w.cfg.FoodRate = 1
 	w.Fish = nil
 	w.Step()
 
@@ -76,5 +76,32 @@ func TestDeterministic(t *testing.T) {
 
 	if !reflect.DeepEqual(a.Fish, b.Fish) || !reflect.DeepEqual(a.Food, b.Food) {
 		t.Error("один seed — разные миры")
+	}
+}
+
+func TestStepSplit(t *testing.T) {
+	w := tiny(0)
+	w.Fish[0].Energy = w.cfg.SplitEnergy + w.cfg.MoveCost + 1
+	w.Step()
+
+	if len(w.Fish) != 2 {
+		t.Fatalf("рыб %d, want 2", len(w.Fish))
+	}
+	a, b := w.Fish[0].Energy, w.Fish[1].Energy
+	if want := w.cfg.SplitEnergy + 1; a+b != want {
+		t.Errorf("энергия %d+%d=%d, want %d (энергия не должна появляться из ничего)", a, b, a+b, want)
+	}
+	if a-b > 1 || b-a > 1 {
+		t.Errorf("энергия поделена неровно: %d и %d", a, b)
+	}
+}
+
+func TestStepNoSplitBelowThreshold(t *testing.T) {
+	w := tiny(0)
+	w.Fish[0].Energy = w.cfg.SplitEnergy + w.cfg.MoveCost - 1
+	w.Step()
+
+	if len(w.Fish) != 1 {
+		t.Errorf("рыб %d, want 1", len(w.Fish))
 	}
 }

@@ -6,6 +6,9 @@ func TestNew(t *testing.T) {
 	cfg := DefaultConfig()
 	w := New(cfg)
 
+	if w.Seed() != cfg.Seed {
+		t.Errorf("seed %d, want %d", w.Seed(), cfg.Seed)
+	}
 	if len(w.Fish) != cfg.Fish {
 		t.Errorf("рыб %d, want %d", len(w.Fish), cfg.Fish)
 	}

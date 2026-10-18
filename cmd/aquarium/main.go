@@ -10,6 +10,8 @@ import (
 	"math/rand/v2"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -45,7 +47,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, "width, height и speed должны быть больше 0, fish, predators и steps — не меньше 0")
 		os.Exit(2)
 	}
-	if cfg.Seed == 0 {
+	random := cfg.Seed == 0
+	if random {
 		cfg.Seed = rand.Uint64()
 	}
 
@@ -56,6 +59,17 @@ func main() {
 		fmt.Fprintln(os.Stderr, "aquarium:", err)
 		os.Exit(1)
 	}
+	fmt.Printf("seed %d, повторить: %s\n", cfg.Seed, repeat(os.Args[1:], cfg.Seed, random))
+}
+
+// repeat собирает команду, которая повторит этот запуск. Если seed был
+// случайным, он дописывается в конец: из нескольких -seed побеждает последний.
+func repeat(args []string, seed uint64, random bool) string {
+	cmd := append([]string{"aquarium"}, args...)
+	if random {
+		cmd = append(cmd, "-seed", strconv.FormatUint(seed, 10))
+	}
+	return strings.Join(cmd, " ")
 }
 
 // start открывает CSV, если он нужен, и запускает симуляцию: на экране
@@ -83,7 +97,7 @@ func start(ctx context.Context, cfg sim.Config, speed, steps int, csvPath string
 	if steps > 0 {
 		return headless(ctx, w, steps, rec)
 	}
-	return run(ctx, w, cfg.Seed, speed, rec)
+	return run(ctx, w, speed, rec)
 }
 
 // headless прогоняет steps шагов без экрана и печатает итог.
@@ -102,7 +116,7 @@ func headless(ctx context.Context, w *sim.World, steps int, rec *stats.CSV) erro
 }
 
 // run показывает аквариум на экране, пока его не закроют.
-func run(ctx context.Context, w *sim.World, seed uint64, speed int, rec *stats.CSV) error {
+func run(ctx context.Context, w *sim.World, speed int, rec *stats.CSV) error {
 	scr, err := tcell.NewScreen()
 	if err != nil {
 		return err
@@ -135,7 +149,7 @@ func run(ctx context.Context, w *sim.World, seed uint64, speed int, rec *stats.C
 		case paused:
 			status, steps = "пауза: пробел — продолжить  n — шаг  q — выход", nil
 		}
-		render.Frame(scr, w, seed, status)
+		render.Frame(scr, w, status)
 
 		select {
 		case <-ctx.Done():

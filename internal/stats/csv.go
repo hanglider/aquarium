@@ -9,7 +9,7 @@ import (
 	"github.com/hanglider/aquarium/internal/sim"
 )
 
-var header = []string{"step", "fish", "predators", "food", "speed", "vision", "cost"}
+var header = []string{"seed", "step", "fish", "predators", "food", "speed", "vision", "cost"}
 
 // CSV пишет по строке на каждый шаг симуляции.
 type CSV struct {
@@ -26,6 +26,7 @@ func NewCSV(out io.Writer) (*CSV, error) {
 func (c *CSV) Row(w *sim.World) error {
 	a := w.Averages()
 	return c.w.Write([]string{
+		strconv.FormatUint(w.Seed(), 10),
 		strconv.Itoa(w.Steps),
 		strconv.Itoa(len(w.Fish)),
 		strconv.Itoa(len(w.Predators)),

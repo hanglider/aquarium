@@ -17,7 +17,7 @@ func TestNew(t *testing.T) {
 			t.Errorf("рыба вне мира: %+v", f.Pos)
 		}
 		if f.Energy != cfg.StartEnergy {
-			t.Errorf("энергия %d, want %d", f.Energy, cfg.StartEnergy)
+			t.Errorf("энергия %v, want %v", f.Energy, cfg.StartEnergy)
 		}
 	}
 }

@@ -40,14 +40,14 @@ func TestFrame(t *testing.T) {
 	cfg := sim.DefaultConfig()
 	cfg.Width, cfg.Height = 4, 2
 	cfg.Fish, cfg.Food, cfg.Predators = 0, 0, 0
+	cfg.Seed = 42
 	w := sim.New(cfg)
 	w.Fish = []sim.Fish{{Pos: sim.Pos{X: 0, Y: 0}, Energy: 1, Genes: sim.Genes{Speed: 1.5, Vision: 3}}}
 	w.Predators = []sim.Fish{{Pos: sim.Pos{X: 1, Y: 1}, Energy: 1}}
 	w.Food[sim.Pos{X: 3, Y: 1}] = true
 
 	s := screen(t, 60, 7)
-	Frame(s, w, 42)
-	Notice(s, w, "конец")
+	Frame(s, w, "конец")
 
 	want := "" +
 		"┌────┐\n" +

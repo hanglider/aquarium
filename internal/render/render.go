@@ -18,9 +18,10 @@ var (
 	foodStyle     = tcell.StyleDefault.Foreground(tcell.ColorGreen)
 )
 
-// Frame рисует один кадр: аквариум в рамке и две строки статистики под ним.
+// Frame рисует один кадр: аквариум в рамке, две строки статистики под ним
+// и строку status — подсказку или сообщение.
 // tcell сам сравнивает кадр с предыдущим и перерисовывает только изменённые клетки.
-func Frame(s tcell.Screen, w *sim.World, seed uint64) {
+func Frame(s tcell.Screen, w *sim.World, status string) {
 	s.Clear()
 
 	line := strings.Repeat("─", w.Width)
@@ -43,17 +44,12 @@ func Frame(s tcell.Screen, w *sim.World, seed uint64) {
 	}
 
 	s.PutStr(0, w.Height+2, fmt.Sprintf("шаг %d  рыб %d  хищников %d  корма %d  seed %d",
-		w.Steps, len(w.Fish), len(w.Predators), len(w.Food), seed))
+		w.Steps, len(w.Fish), len(w.Predators), len(w.Food), w.Seed()))
 	a := w.Averages()
 	s.PutStr(0, w.Height+3, fmt.Sprintf("в среднем: скорость %.2f  зрение %.1f  расход %.2f",
 		a.Speed, a.Vision, a.Cost))
+	s.PutStr(0, w.Height+4, status)
 
-	s.Show()
-}
-
-// Notice выводит сообщение строкой ниже статистики.
-func Notice(s tcell.Screen, w *sim.World, text string) {
-	s.PutStr(0, w.Height+4, text)
 	s.Show()
 }
 

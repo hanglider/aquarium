@@ -96,6 +96,11 @@ func New(cfg Config) *World {
 	return w
 }
 
+// Seed — seed, с которым создан мир: с ним запуск можно повторить.
+func (w *World) Seed() uint64 {
+	return w.cfg.Seed
+}
+
 func (w *World) randomPos() Pos {
 	return Pos{X: w.rng.IntN(w.Width), Y: w.rng.IntN(w.Height)}
 }

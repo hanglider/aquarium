@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aquarium</title>
+<style>
+  :root {
+    --bg: #fbfbf8; --fg: #1d2421; --muted: #5d6762; --line: #dfe3df;
+    --fish: #b88a00; --predator: #c0392b; --food: #2e8b57; --vision: #1f7a8c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121614; --fg: #e4e8e5; --muted: #9aa49f; --line: #2a312d;
+      --fish: #e0b43a; --predator: #ef6a5a; --food: #5cc28a; --vision: #4fb3c6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 40px 0 8px; }
+  p, li { color: var(--muted); }
+  code {
+    font: 0.9em ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--line); padding: 1px 5px; border-radius: 4px; color: var(--fg);
+  }
+  pre {
+    background: var(--line); padding: 12px 14px; border-radius: 6px; overflow-x: auto;
+    font: 0.9rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg);
+  }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.9rem; color: var(--muted); }
+  .legend b { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+  .chart { position: relative; height: 260px; margin-top: 8px; }
+  #status { font-size: 0.9rem; }
+  a { color: var(--vision); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Aquarium</h1>
+  <p>Консольный симулятор эволюции рыб на Go. Рыбы ищут корм, делятся и передают
+    малькам гены с мутацией, а хищники охотятся на рыб. Отбор сам находит баланс:
+    быстрая и зоркая рыба лучше находит корм и уходит от хищника, но тратит больше энергии.</p>
+
+  <pre>&gt; рыба   @ хищник   * корм</pre>
+
+  <h2>Как запустить</h2>
+  <p>Скачайте бинарник со страницы
+    <a href="https://github.com/hanglider/aquarium/releases/latest">последнего релиза</a> или соберите сами:</p>
+  <pre>go run github.com/hanglider/aquarium/cmd/aquarium@latest</pre>
+  <p>Пробел — пауза, <code>n</code> — шаг на паузе, <code>q</code> — выход.
+    <code>-csv файл</code> сохраняет статистику каждого шага, <code>-steps N</code> считает без экрана.</p>
+
+  <h2>Численность</h2>
+  <div class="legend"><span><b style="background:var(--fish)"></b>рыбы</span>
+    <span><b style="background:var(--predator)"></b>хищники</span></div>
+  <div class="chart"><canvas id="population"></canvas></div>
+
+  <h2>Средние гены рыб</h2>
+  <div class="legend"><span><b style="background:var(--fish)"></b>скорость, клеток за шаг</span>
+    <span><b style="background:var(--vision)"></b>зрение, клеток</span></div>
+  <div class="chart"><canvas id="genes"></canvas></div>
+
+  <p id="status">Загружаю данные…</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+<script>
+  // data.csv кладёт сюда workflow Pages: прогон с фиксированным seed, каждый 20-й шаг.
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  function line(id, rows, series) {
+    new Chart(document.getElementById(id), {
+      type: 'line',
+      data: {
+        labels: rows.map((r) => r.step),
+        datasets: series.map(([key, color]) => ({
+          data: rows.map((r) => r[key]), borderColor: css(color),
+          borderWidth: 1.5, pointRadius: 0, tension: 0.2,
+        })),
+      },
+      options: {
+        maintainAspectRatio: false, animation: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: css('--muted'), maxTicksLimit: 8 }, grid: { color: css('--line') } },
+          y: { ticks: { color: css('--muted') }, grid: { color: css('--line') }, beginAtZero: true },
+        },
+      },
+    });
+  }
+
+  fetch('data.csv')
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then((text) => {
+      const [head, ...lines] = text.trim().split('\n');
+      const cols = head.split(',');
+      const rows = lines.map((l) => Object.fromEntries(l.split(',').map((v, i) => [cols[i], +v])));
+      line('population', rows, [['fish', '--fish'], ['predators', '--predator']]);
+      line('genes', rows, [['speed', '--fish'], ['vision', '--vision']]);
+      const last = rows[rows.length - 1];
+      document.getElementById('status').textContent =
+        `Прогон с seed ${last.seed}: ${last.step} шагов, в конце рыб ${last.fish}, хищников ${last.predators}.`;
+    })
+    .catch((e) => { document.getElementById('status').textContent = 'Не удалось загрузить data.csv: ' + e.message; });
+</script>
+</body>
+</html>

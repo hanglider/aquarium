@@ -12,7 +12,7 @@ squash/rebase, Issues, Projects, Actions, релизы, Packages, Pages, securit
   в changelog), ждёшь «ок», потом мерж merge commit'ом и аннотированный тег `vX.Y.Z` на `main` —
   остальное сделает workflow `release.yml`.
 - **Вручную, вместе с человеком** (ты объясняешь, он нажимает): релиз по тегу через Actions,
-  GitHub Pages, environments, Codespaces, Discussions. Settings репо меняет человек.
+  GitHub Pages, environments. Settings репо меняет человек.
 - Отчитывайся коротко: что сделано и работает ли. Человек сам скажет, что добавить.
 - Объясняй по-человечески, прозой. Когда вводишь новую git- или GitHub-механику,
   коротко поясни, зачем она и на чём обычно спотыкаются.
@@ -117,7 +117,7 @@ CodeQL и Dependabot решили не подключать.
 ### v0.5.0 — статистика и наблюдение
 Экспорт статистики в CSV, пауза/шаг по клавишам, сохранение seed.
 *Платформа:* GitHub Pages с описанием проекта и графиками эволюции, деплой через environment
-`github-pages`; devcontainer для Codespaces; Discussions.
+`github-pages`. Codespaces и Discussions решили не делать.
 
 ### v1.0.0 — стабильная версия
 Чистка, README с гифкой, документация флагов.

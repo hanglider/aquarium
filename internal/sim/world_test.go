@@ -9,6 +9,9 @@ func TestNew(t *testing.T) {
 	if len(w.Fish) != cfg.Fish {
 		t.Errorf("рыб %d, want %d", len(w.Fish), cfg.Fish)
 	}
+	if len(w.Predators) != cfg.Predators {
+		t.Errorf("хищников %d, want %d", len(w.Predators), cfg.Predators)
+	}
 	if len(w.Food) == 0 || len(w.Food) > cfg.Food {
 		t.Errorf("корма %d, want 1..%d", len(w.Food), cfg.Food)
 	}

@@ -8,7 +8,9 @@ squash/rebase, Issues, Projects, Actions, релизы, Packages, Pages, securit
 
 - Рутину на GitHub делаешь ты (Claude Code) через `gh`: issues, milestones, метки, PR,
   squash-мерж в `dev` после зелёного CI.
-- Релизы — только по согласованию: готовишь PR `dev` → `main`, ждёшь «ок», потом мерж и тег.
+- Релизы — только по согласованию: готовишь PR `dev` → `main` с меткой `release` (чтобы он не попал
+  в changelog), ждёшь «ок», потом мерж merge commit'ом и аннотированный тег `vX.Y.Z` на `main` —
+  остальное сделает workflow `release.yml`.
 - **Вручную, вместе с человеком** (ты объясняешь, он нажимает): релиз по тегу через Actions,
   GitHub Pages, environments, Codespaces, Discussions. Settings репо меняет человек.
 - Отчитывайся коротко: что сделано и работает ли. Человек сам скажет, что добавить.

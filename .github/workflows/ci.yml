@@ -38,6 +38,12 @@ jobs:
       - name: go build
         run: go build ./...
 
+      # cmd/web собирается только под js/wasm, обычный go build его пропускает.
+      - name: go build (WebAssembly для сайта)
+        run: |
+          GOOS=js GOARCH=wasm go vet ./cmd/web
+          GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/web
+
   vuln:
     name: govulncheck
     runs-on: ubuntu-latest

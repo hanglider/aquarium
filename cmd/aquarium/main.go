@@ -27,15 +27,23 @@ var version = "dev"
 
 func main() {
 	cfg := sim.DefaultConfig()
-	flag.IntVar(&cfg.Width, "width", cfg.Width, "ширина аквариума")
-	flag.IntVar(&cfg.Height, "height", cfg.Height, "высота аквариума")
-	flag.IntVar(&cfg.Fish, "fish", cfg.Fish, "число рыб")
-	flag.IntVar(&cfg.Predators, "predators", cfg.Predators, "число хищников в начале")
-	speed := flag.Int("speed", 10, "шагов в секунду")
-	steps := flag.Int("steps", 0, "прогнать столько шагов без экрана и выйти")
-	csvPath := flag.String("csv", "", "писать статистику каждого шага в этот CSV-файл")
-	flag.Uint64Var(&cfg.Seed, "seed", 0, "seed симуляции, 0 — случайный")
+	flag.IntVar(&cfg.Width, "width", cfg.Width, "ширина аквариума, `клеток`")
+	flag.IntVar(&cfg.Height, "height", cfg.Height, "высота аквариума, `клеток`")
+	flag.IntVar(&cfg.Fish, "fish", cfg.Fish, "`число` рыб")
+	flag.IntVar(&cfg.Predators, "predators", cfg.Predators, "`число` хищников в начале")
+	speed := flag.Int("speed", 10, "`шагов` в секунду")
+	steps := flag.Int("steps", 0, "прогнать столько `шагов` без экрана и выйти")
+	csvPath := flag.String("csv", "", "писать статистику каждого шага в этот CSV-`файл`")
+	flag.Uint64Var(&cfg.Seed, "seed", 0, "`seed` симуляции, 0 — случайный")
 	showVersion := flag.Bool("version", false, "показать версию и выйти")
+	flag.Usage = func() {
+		out := flag.CommandLine.Output()
+		fmt.Fprint(out, "aquarium — симулятор эволюции рыб.\n\n",
+			"Использование: aquarium [флаги]\n\n",
+			"Клавиши: пробел — пауза, n — шаг на паузе, q или Esc — выход.\n\n",
+			"Флаги:\n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
 	if *showVersion {

@@ -24,11 +24,13 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - name: Прогнать симуляцию
+      - name: Собрать симуляцию в WebAssembly
         run: |
-          go run ./cmd/aquarium -steps 20000 -seed 1 -csv full.csv
-          # Каждый 20-й шаг: для графика хватит, а файл в 20 раз меньше.
-          awk -F, 'NR == 1 || $2 % 20 == 0' full.csv > site/data.csv
+          GOOS=js GOARCH=wasm go build -trimpath -ldflags "-s -w" -o site/aquarium.wasm ./cmd/web
+          # Загрузчик wasm идёт вместе с Go и должен быть той же версии, что и компилятор.
+          cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" site/
+      - name: Нарисовать GIF для README
+        run: go run ./tools/gif -o site/aquarium.gif
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

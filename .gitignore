@@ -35,4 +35,6 @@ go.work.sum
 # Собранный бинарник
 /aquarium
 /dist/
-/site/data.csv
+/site/aquarium.wasm
+/site/wasm_exec.js
+/site/aquarium.gif

@@ -20,10 +20,10 @@ func DefaultConfig() Config {
 		Width:       60,
 		Height:      20,
 		Fish:        20,
-		Food:        40,
+		Food:        200,
 		FoodChance:  0.5,
-		StartEnergy: 30,
-		FoodEnergy:  15,
+		StartEnergy: 60,
+		FoodEnergy:  20,
 		MoveCost:    1,
 	}
 }

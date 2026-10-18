@@ -7,10 +7,11 @@ type Config struct {
 	Width, Height int
 	Fish          int     // начальное число рыб
 	Food          int     // начальное число корма
-	FoodChance    float64 // вероятность появления корма за шаг
+	FoodRate      float64 // сколько корма появляется за шаг в среднем
 	StartEnergy   int     // энергия новой рыбы
 	FoodEnergy    int     // энергия за съеденный корм
 	MoveCost      int     // расход энергии за шаг
+	SplitEnergy   int     // при такой энергии рыба делится надвое
 	Seed          uint64
 }
 
@@ -21,10 +22,11 @@ func DefaultConfig() Config {
 		Height:      20,
 		Fish:        20,
 		Food:        200,
-		FoodChance:  0.5,
+		FoodRate:    2,
 		StartEnergy: 60,
 		FoodEnergy:  20,
 		MoveCost:    1,
+		SplitEnergy: 120,
 	}
 }
 

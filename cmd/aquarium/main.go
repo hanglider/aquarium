@@ -15,6 +15,9 @@ import (
 	"github.com/hanglider/aquarium/internal/sim"
 )
 
+// version подставляется при сборке релиза: -ldflags "-X main.version=v1.2.3".
+var version = "dev"
+
 func main() {
 	cfg := sim.DefaultConfig()
 	flag.IntVar(&cfg.Width, "width", cfg.Width, "ширина аквариума")
@@ -22,7 +25,13 @@ func main() {
 	flag.IntVar(&cfg.Fish, "fish", cfg.Fish, "число рыб")
 	speed := flag.Int("speed", 10, "шагов в секунду")
 	flag.Uint64Var(&cfg.Seed, "seed", 0, "seed симуляции, 0 — случайный")
+	showVersion := flag.Bool("version", false, "показать версию и выйти")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("aquarium", version)
+		return
+	}
 
 	if cfg.Width < 1 || cfg.Height < 1 || cfg.Fish < 0 || *speed < 1 {
 		fmt.Fprintln(os.Stderr, "width, height и speed должны быть больше 0, fish — не меньше 0")

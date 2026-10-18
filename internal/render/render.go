@@ -67,6 +67,9 @@ func Frame(out io.Writer, w *sim.World, seed uint64) {
 	b.WriteString(cyan + "└" + border + "┘" + reset + "\n")
 	fmt.Fprintf(&b, "шаг %d  рыб %d  корма %d  seed %d%s\n",
 		w.Steps, len(w.Fish), len(w.Food), seed, clearLine)
+	a := w.Averages()
+	fmt.Fprintf(&b, "в среднем: скорость %.2f  зрение %.1f  расход %.2f%s\n",
+		a.Speed, a.Vision, a.Cost, clearLine)
 
 	io.WriteString(out, b.String())
 }

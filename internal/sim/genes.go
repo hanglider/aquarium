@@ -30,3 +30,26 @@ func (w *World) mutate(g Genes) Genes {
 func clampF(v, lo, hi float64) float64 {
 	return max(lo, min(v, hi))
 }
+
+// Averages — средние значения генов и расхода энергии по живым рыбам.
+type Averages struct {
+	Speed, Vision, Cost float64
+}
+
+// Averages считает средние по популяции; для пустого аквариума — нули.
+func (w *World) Averages() Averages {
+	var a Averages
+	if len(w.Fish) == 0 {
+		return a
+	}
+	for _, f := range w.Fish {
+		a.Speed += f.Genes.Speed
+		a.Vision += f.Genes.Vision
+		a.Cost += w.Cost(f.Genes)
+	}
+	n := float64(len(w.Fish))
+	a.Speed /= n
+	a.Vision /= n
+	a.Cost /= n
+	return a
+}

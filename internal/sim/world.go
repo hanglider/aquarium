@@ -16,7 +16,15 @@ type Config struct {
 	Seed          uint64
 
 	// Расход энергии за шаг: BaseCost + SpeedCost·скорость² + VisionCost·зрение.
+	// Формула общая для рыб и хищников.
 	BaseCost, SpeedCost, VisionCost float64
+
+	Predators      int     // начальное число хищников
+	PredatorEnergy float64 // энергия нового хищника
+	PreyEnergy     float64 // энергия хищника за съеденную рыбу
+	PredatorSplit  float64 // при такой энергии хищник делится надвое
+	PredatorGenes  Genes   // гены хищников в начале
+	PredatorRate   float64 // сколько хищников приплывает извне за шаг в среднем
 }
 
 // DefaultConfig возвращает конфиг с разумными значениями.
@@ -35,13 +43,20 @@ func DefaultConfig() Config {
 		BaseCost:    0.4,
 		SpeedCost:   0.4,
 		VisionCost:  0.1,
+
+		Predators:      3,
+		PredatorEnergy: 100,
+		PreyEnergy:     15,
+		PredatorSplit:  200,
+		PredatorGenes:  Genes{Speed: 1, Vision: 4},
+		PredatorRate:   0.02,
 	}
 }
 
 // Pos — клетка сетки.
 type Pos struct{ X, Y int }
 
-// Fish — одна рыба.
+// Fish — одна рыба. Хищники описываются так же, только живут в своём слайсе.
 type Fish struct {
 	Pos    Pos
 	Energy float64
@@ -52,6 +67,7 @@ type Fish struct {
 type World struct {
 	Width, Height int
 	Fish          []Fish
+	Predators     []Fish
 	Food          map[Pos]bool
 	Steps         int
 
@@ -70,6 +86,9 @@ func New(cfg Config) *World {
 	}
 	for range cfg.Fish {
 		w.Fish = append(w.Fish, Fish{Pos: w.randomPos(), Energy: cfg.StartEnergy, Genes: cfg.StartGenes})
+	}
+	for range cfg.Predators {
+		w.Predators = append(w.Predators, Fish{Pos: w.randomPos(), Energy: cfg.PredatorEnergy, Genes: cfg.PredatorGenes})
 	}
 	for range cfg.Food {
 		w.Food[w.randomPos()] = true

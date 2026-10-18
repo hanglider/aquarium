@@ -23,6 +23,7 @@ func main() {
 	flag.IntVar(&cfg.Width, "width", cfg.Width, "ширина аквариума")
 	flag.IntVar(&cfg.Height, "height", cfg.Height, "высота аквариума")
 	flag.IntVar(&cfg.Fish, "fish", cfg.Fish, "число рыб")
+	flag.IntVar(&cfg.Predators, "predators", cfg.Predators, "число хищников в начале")
 	speed := flag.Int("speed", 10, "шагов в секунду")
 	flag.Uint64Var(&cfg.Seed, "seed", 0, "seed симуляции, 0 — случайный")
 	showVersion := flag.Bool("version", false, "показать версию и выйти")
@@ -33,8 +34,8 @@ func main() {
 		return
 	}
 
-	if cfg.Width < 1 || cfg.Height < 1 || cfg.Fish < 0 || *speed < 1 {
-		fmt.Fprintln(os.Stderr, "width, height и speed должны быть больше 0, fish — не меньше 0")
+	if cfg.Width < 1 || cfg.Height < 1 || cfg.Fish < 0 || cfg.Predators < 0 || *speed < 1 {
+		fmt.Fprintln(os.Stderr, "width, height и speed должны быть больше 0, fish и predators — не меньше 0")
 		os.Exit(2)
 	}
 	if cfg.Seed == 0 {

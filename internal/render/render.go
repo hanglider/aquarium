@@ -1,75 +1,63 @@
-// Package render отрисовывает состояние симуляции в терминал.
+// Package render рисует состояние симуляции в терминале через tcell.
 package render
 
 import (
 	"fmt"
-	"io"
 	"strings"
+
+	"github.com/gdamore/tcell/v2"
 
 	"github.com/hanglider/aquarium/internal/sim"
 )
 
-// ANSI escape-коды.
-const (
-	home       = "\x1b[H"
-	clear      = "\x1b[2J"
-	clearLine  = "\x1b[K"
-	hideCursor = "\x1b[?25l"
-	showCursor = "\x1b[?25h"
-	reset      = "\x1b[0m"
-	yellow     = "\x1b[33m"
-	green      = "\x1b[32m"
-	cyan       = "\x1b[36m"
+// Цвета — те же, что были в ANSI-версии: красный, жёлтый, зелёный, бирюзовый.
+var (
+	borderStyle   = tcell.StyleDefault.Foreground(tcell.ColorTeal)
+	predatorStyle = tcell.StyleDefault.Foreground(tcell.ColorMaroon)
+	fishStyle     = tcell.StyleDefault.Foreground(tcell.ColorOlive)
+	foodStyle     = tcell.StyleDefault.Foreground(tcell.ColorGreen)
 )
 
-const (
-	fishCell = yellow + ">" + reset
-	foodCell = green + "*" + reset
-)
+// Frame рисует один кадр: аквариум в рамке и две строки статистики под ним.
+// tcell сам сравнивает кадр с предыдущим и перерисовывает только изменённые клетки.
+func Frame(s tcell.Screen, w *sim.World, seed uint64) {
+	s.Clear()
 
-// Start готовит терминал: очищает экран и прячет курсор.
-func Start(out io.Writer) {
-	fmt.Fprint(out, clear, hideCursor)
-}
-
-// Stop возвращает терминал в обычное состояние.
-func Stop(out io.Writer) {
-	fmt.Fprint(out, reset, showCursor)
-}
-
-// Frame рисует один кадр: аквариум в рамке и строку статистики.
-// Курсор переводится в начало экрана, а не экран очищается, — так нет мерцания.
-func Frame(out io.Writer, w *sim.World, seed uint64) {
-	fish := make(map[sim.Pos]bool, len(w.Fish))
-	for _, f := range w.Fish {
-		fish[f.Pos] = true
-	}
-
-	var b strings.Builder
-	b.WriteString(home)
-	border := cyan + strings.Repeat("─", w.Width)
-	b.WriteString(cyan + "┌" + border + "┐" + reset + "\n")
+	line := strings.Repeat("─", w.Width)
+	s.PutStrStyled(0, 0, "┌"+line+"┐", borderStyle)
 	for y := range w.Height {
-		b.WriteString(cyan + "│" + reset)
-		for x := range w.Width {
-			p := sim.Pos{X: x, Y: y}
-			switch {
-			case fish[p]:
-				b.WriteString(fishCell)
-			case w.Food[p]:
-				b.WriteString(foodCell)
-			default:
-				b.WriteByte(' ')
-			}
-		}
-		b.WriteString(cyan + "│" + reset + "\n")
+		s.PutStrStyled(0, y+1, "│", borderStyle)
+		s.PutStrStyled(w.Width+1, y+1, "│", borderStyle)
 	}
-	b.WriteString(cyan + "└" + border + "┘" + reset + "\n")
-	fmt.Fprintf(&b, "шаг %d  рыб %d  корма %d  seed %d%s\n",
-		w.Steps, len(w.Fish), len(w.Food), seed, clearLine)
-	a := w.Averages()
-	fmt.Fprintf(&b, "в среднем: скорость %.2f  зрение %.1f  расход %.2f%s\n",
-		a.Speed, a.Vision, a.Cost, clearLine)
+	s.PutStrStyled(0, w.Height+1, "└"+line+"┘", borderStyle)
 
-	io.WriteString(out, b.String())
+	// Порядок важен: кто нарисован позже, тот и виден, если клетка общая.
+	for p := range w.Food {
+		cell(s, p, "*", foodStyle)
+	}
+	for _, f := range w.Fish {
+		cell(s, f.Pos, ">", fishStyle)
+	}
+	for _, p := range w.Predators {
+		cell(s, p.Pos, "@", predatorStyle)
+	}
+
+	s.PutStr(0, w.Height+2, fmt.Sprintf("шаг %d  рыб %d  хищников %d  корма %d  seed %d",
+		w.Steps, len(w.Fish), len(w.Predators), len(w.Food), seed))
+	a := w.Averages()
+	s.PutStr(0, w.Height+3, fmt.Sprintf("в среднем: скорость %.2f  зрение %.1f  расход %.2f",
+		a.Speed, a.Vision, a.Cost))
+
+	s.Show()
+}
+
+// Notice выводит сообщение строкой ниже статистики.
+func Notice(s tcell.Screen, w *sim.World, text string) {
+	s.PutStr(0, w.Height+4, text)
+	s.Show()
+}
+
+// cell рисует символ в клетке аквариума (сдвиг на 1 — из-за рамки).
+func cell(s tcell.Screen, p sim.Pos, ch string, style tcell.Style) {
+	s.PutStrStyled(p.X+1, p.Y+1, ch, style)
 }

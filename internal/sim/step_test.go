@@ -10,7 +10,7 @@ import (
 func tiny(energy float64) *World {
 	cfg := DefaultConfig()
 	cfg.Width, cfg.Height = 1, 1
-	cfg.Fish, cfg.Food = 1, 0
+	cfg.Fish, cfg.Food, cfg.Predators = 1, 0, 0
 	cfg.FoodRate = 0
 	cfg.StartEnergy = energy
 	return New(cfg)
@@ -18,14 +18,22 @@ func tiny(energy float64) *World {
 
 // line — мир 10×1 с одной рыбой в левой клетке и без случайного корма.
 func line(g Genes) *World {
-	cfg := DefaultConfig()
-	cfg.Width, cfg.Height = 10, 1
-	cfg.Fish, cfg.Food = 0, 0
-	cfg.FoodRate = 0
-	w := New(cfg)
+	w := pond()
 	w.Fish = []Fish{{Pos: Pos{0, 0}, Energy: 50, Genes: g}}
 	return w
 }
+
+// pond — пустой мир 10×1: ни рыб, ни хищников, ни корма.
+func pond() *World {
+	cfg := DefaultConfig()
+	cfg.Width, cfg.Height = 10, 1
+	cfg.Fish, cfg.Food, cfg.Predators = 0, 0, 0
+	cfg.FoodRate = 0
+	return New(cfg)
+}
+
+// still — гены особи, которая стоит на месте и ничего не видит дальше своей клетки.
+var still = Genes{Speed: 0, Vision: 0}
 
 func near(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 
@@ -192,7 +200,80 @@ func TestDeterministic(t *testing.T) {
 		b.Step()
 	}
 
-	if !reflect.DeepEqual(a.Fish, b.Fish) || !reflect.DeepEqual(a.Food, b.Food) {
+	if !reflect.DeepEqual(a.Fish, b.Fish) || !reflect.DeepEqual(a.Predators, b.Predators) ||
+		!reflect.DeepEqual(a.Food, b.Food) {
 		t.Error("один seed — разные миры")
+	}
+}
+
+func TestPredatorEats(t *testing.T) {
+	w := pond()
+	g := Genes{Speed: 1, Vision: 3}
+	w.Predators = []Fish{{Pos: Pos{0, 0}, Energy: 50, Genes: g}}
+	w.Fish = []Fish{{Pos: Pos{1, 0}, Energy: 50, Genes: still}}
+	w.Step()
+
+	if len(w.Fish) != 0 {
+		t.Fatalf("рыба не съедена: %+v, хищник в %+v", w.Fish, w.Predators[0].Pos)
+	}
+	want := 50 + w.cfg.PreyEnergy - w.Cost(g)
+	if got := w.Predators[0].Energy; !near(got, want) {
+		t.Errorf("энергия хищника %v, want %v", got, want)
+	}
+}
+
+func TestPredatorEatsOneFishPerCell(t *testing.T) {
+	w := pond()
+	w.Predators = []Fish{{Pos: Pos{0, 0}, Energy: 50, Genes: Genes{Speed: 1, Vision: 3}}}
+	fish := Fish{Pos: Pos{1, 0}, Energy: 50, Genes: still}
+	w.Fish = []Fish{fish, fish}
+	w.Step()
+
+	if len(w.Fish) != 1 {
+		t.Errorf("рыб %d, want 1: за один ход хищник ест одну рыбу", len(w.Fish))
+	}
+}
+
+func TestPredatorStarves(t *testing.T) {
+	w := pond()
+	w.Predators = []Fish{{Pos: Pos{0, 0}, Genes: still}}
+	w.Predators[0].Energy = w.Cost(still)
+	w.Step()
+
+	if len(w.Predators) != 0 {
+		t.Errorf("голодный хищник жив: %+v", w.Predators)
+	}
+}
+
+func TestPredatorSplit(t *testing.T) {
+	w := pond()
+	w.Predators = []Fish{{Pos: Pos{0, 0}, Genes: still}}
+	w.Predators[0].Energy = w.cfg.PredatorSplit + w.Cost(still) + 1
+	w.Step()
+
+	if len(w.Predators) != 2 {
+		t.Errorf("хищников %d, want 2", len(w.Predators))
+	}
+}
+
+func TestFishFlees(t *testing.T) {
+	w := line(Genes{Speed: 1, Vision: 3})
+	w.Fish[0].Pos = Pos{5, 0}
+	w.Food[Pos{4, 0}] = true // корм рядом, но хищник важнее
+	w.Predators = []Fish{{Pos: Pos{3, 0}, Energy: 50, Genes: still}}
+	w.Step()
+
+	if got := w.Fish[0].Pos; got != (Pos{6, 0}) {
+		t.Errorf("рыба в %+v, want {6 0}: должна уплыть от хищника", got)
+	}
+}
+
+func TestPredatorsArrive(t *testing.T) {
+	w := pond()
+	w.cfg.PredatorRate = 1
+	w.Step()
+
+	if len(w.Predators) != 1 {
+		t.Errorf("хищников %d, want 1", len(w.Predators))
 	}
 }

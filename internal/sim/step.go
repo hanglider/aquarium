@@ -1,35 +1,86 @@
 package sim
 
-// Step продвигает мир на один шаг: рыбы плывут, едят, тратят энергию,
-// голодные умирают, сытые делятся, появляется новый корм.
+// Step продвигает мир на один шаг: рыбы плывут и едят корм, хищники плывут
+// и едят рыб, голодные умирают, сытые делятся, появляется новый корм.
 func (w *World) Step() {
+	w.stepFish()
+	w.stepPredators()
+	w.spawnFood()
+	w.spawnPredators()
+	w.Steps++
+}
+
+// stepFish — ход рыб. Рыба, которая видит хищника, уплывает от него,
+// иначе плывёт к корму.
+func (w *World) stepFish() {
+	danger := make(map[Pos]bool, len(w.Predators))
+	for _, p := range w.Predators {
+		danger[p.Pos] = true
+	}
 	alive := w.Fish[:0]
 	var born []Fish
 	for _, f := range w.Fish {
 		for range w.moves(f.Genes.Speed) {
-			f.Pos = w.move(f.Pos, f.Genes.Vision)
+			f.Pos = w.swim(f.Pos, f.Genes.Vision, danger)
 			if w.Food[f.Pos] {
 				delete(w.Food, f.Pos)
 				f.Energy += w.cfg.FoodEnergy
 			}
 		}
-		f.Energy -= w.Cost(f.Genes)
-		if f.Energy <= 0 {
-			continue
-		}
-		if f.Energy >= w.cfg.SplitEnergy {
-			child := Fish{Pos: f.Pos, Energy: f.Energy / 2, Genes: w.mutate(f.Genes)}
-			f.Energy -= child.Energy
-			born = append(born, child)
-		}
-		alive = append(alive, f)
+		w.live(f, w.cfg.SplitEnergy, &alive, &born)
 	}
 	// Мальки добавляются после цикла: alive пишет в тот же массив,
 	// что и w.Fish, и append внутри цикла затёр бы ещё не обработанных рыб.
 	w.Fish = append(alive, born...)
+}
 
-	w.spawnFood()
-	w.Steps++
+// stepPredators — ход хищников: плывут к ближайшей видимой рыбе
+// и съедают по одной рыбе в каждой клетке, куда попали.
+func (w *World) stepPredators() {
+	prey := make(map[Pos][]int, len(w.Fish)) // клетка → номера рыб в ней
+	for i, f := range w.Fish {
+		prey[f.Pos] = append(prey[f.Pos], i)
+	}
+	hasPrey := func(p Pos) bool { return len(prey[p]) > 0 }
+	eaten := make([]bool, len(w.Fish))
+
+	alive := w.Predators[:0]
+	var born []Fish
+	for _, p := range w.Predators {
+		for range w.moves(p.Genes.Speed) {
+			p.Pos = w.toward(p.Pos, p.Genes.Vision, hasPrey)
+			if fish := prey[p.Pos]; len(fish) > 0 {
+				eaten[fish[len(fish)-1]] = true
+				prey[p.Pos] = fish[:len(fish)-1]
+				p.Energy += w.cfg.PreyEnergy
+			}
+		}
+		w.live(p, w.cfg.PredatorSplit, &alive, &born)
+	}
+	w.Predators = append(alive, born...)
+
+	survivors := w.Fish[:0]
+	for i, f := range w.Fish {
+		if !eaten[i] {
+			survivors = append(survivors, f)
+		}
+	}
+	w.Fish = survivors
+}
+
+// live списывает с особи расход энергии за шаг. Умершая никуда не попадает,
+// живая — в alive, а если накопила split энергии, делится: малёк с мутацией — в born.
+func (w *World) live(f Fish, split float64, alive, born *[]Fish) {
+	f.Energy -= w.Cost(f.Genes)
+	if f.Energy <= 0 {
+		return
+	}
+	if f.Energy >= split {
+		child := Fish{Pos: f.Pos, Energy: f.Energy / 2, Genes: w.mutate(f.Genes)}
+		f.Energy -= child.Energy
+		*born = append(*born, child)
+	}
+	*alive = append(*alive, f)
 }
 
 // moves — сколько клеток рыба проплывёт за шаг: целая часть скорости всегда,
@@ -49,31 +100,50 @@ func (w *World) spawnFood() {
 	}
 }
 
-// move сдвигает рыбу на одну клетку: к ближайшему видимому корму,
-// а если корма не видно — в случайную сторону (или оставляет на месте).
-func (w *World) move(p Pos, vision float64) Pos {
-	var dx, dy int
-	if food, ok := w.nearestFood(p, vision); ok {
-		dx, dy = sign(food.X-p.X), sign(food.Y-p.Y)
-	} else {
-		dx, dy = w.rng.IntN(3)-1, w.rng.IntN(3)-1
+// spawnPredators — в среднем PredatorRate новых хищников за шаг приплывает извне.
+// Без этого хищники рано или поздно вымирают и больше не появляются.
+func (w *World) spawnPredators() {
+	for range w.moves(w.cfg.PredatorRate) {
+		w.Predators = append(w.Predators, Fish{Pos: w.randomPos(), Energy: w.cfg.PredatorEnergy, Genes: w.cfg.PredatorGenes})
 	}
+}
+
+// swim сдвигает рыбу на одну клетку: от ближайшего видимого хищника,
+// если хищника не видно — к ближайшему видимому корму, иначе — куда попало.
+func (w *World) swim(p Pos, vision float64, danger map[Pos]bool) Pos {
+	if enemy, ok := w.nearest(p, vision, func(q Pos) bool { return danger[q] }); ok && enemy != p {
+		return w.shift(p, sign(p.X-enemy.X), sign(p.Y-enemy.Y))
+	}
+	return w.toward(p, vision, func(q Pos) bool { return w.Food[q] })
+}
+
+// toward сдвигает на одну клетку к ближайшей видимой клетке, где есть цель,
+// а если такой не видно — в случайную сторону (или оставляет на месте).
+func (w *World) toward(p Pos, vision float64, target func(Pos) bool) Pos {
+	if q, ok := w.nearest(p, vision, target); ok {
+		return w.shift(p, sign(q.X-p.X), sign(q.Y-p.Y))
+	}
+	return w.shift(p, w.rng.IntN(3)-1, w.rng.IntN(3)-1)
+}
+
+// shift сдвигает позицию на (dx, dy), не выпуская за край аквариума.
+func (w *World) shift(p Pos, dx, dy int) Pos {
 	p.X = clamp(p.X+dx, 0, w.Width-1)
 	p.Y = clamp(p.Y+dy, 0, w.Height-1)
 	return p
 }
 
-// nearestFood ищет ближайший корм в квадрате с радиусом vision.
+// nearest ищет ближайшую клетку с целью в квадрате с радиусом vision.
 // Расстояние — число ходов по 8 направлениям, то есть max(|dx|, |dy|).
 // Клетки перебираются в фиксированном порядке, поэтому при равных
 // расстояниях выбор всегда один и тот же — симуляция остаётся детерминированной.
-func (w *World) nearestFood(p Pos, vision float64) (Pos, bool) {
+func (w *World) nearest(p Pos, vision float64, target func(Pos) bool) (Pos, bool) {
 	r := int(vision)
 	best, bestDist := Pos{}, r+1
 	for y := max(0, p.Y-r); y <= min(w.Height-1, p.Y+r); y++ {
 		for x := max(0, p.X-r); x <= min(w.Width-1, p.X+r); x++ {
 			q := Pos{X: x, Y: y}
-			if d := max(abs(x-p.X), abs(y-p.Y)); d < bestDist && w.Food[q] {
+			if d := max(abs(x-p.X), abs(y-p.Y)); d < bestDist && target(q) {
 				best, bestDist = q, d
 			}
 		}

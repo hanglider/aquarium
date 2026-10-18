@@ -10,6 +10,7 @@ import (
 func TestCSV(t *testing.T) {
 	cfg := sim.DefaultConfig()
 	cfg.Fish, cfg.Food, cfg.Predators = 0, 0, 0
+	cfg.Seed = 42
 	w := sim.New(cfg)
 	w.Fish = []sim.Fish{{Genes: sim.Genes{Speed: 1.5, Vision: 3}}}
 	w.Predators = []sim.Fish{{}, {}}
@@ -27,8 +28,8 @@ func TestCSV(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := "step,fish,predators,food,speed,vision,cost\n" +
-		"0,1,2,1,1.500,3.000,1.600\n"
+	want := "seed,step,fish,predators,food,speed,vision,cost\n" +
+		"42,0,1,2,1,1.500,3.000,1.600\n"
 	if got := b.String(); got != want {
 		t.Errorf("CSV:\n%s\nwant:\n%s", got, want)
 	}

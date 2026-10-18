@@ -46,8 +46,7 @@ func TestFrame(t *testing.T) {
 	w.Food[sim.Pos{X: 3, Y: 1}] = true
 
 	s := screen(t, 60, 7)
-	Frame(s, w, 42)
-	Notice(s, w, "конец")
+	Frame(s, w, 42, "конец")
 
 	want := "" +
 		"┌────┐\n" +

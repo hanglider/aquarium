@@ -1,5 +1,7 @@
 # Разделы автоматического changelog: PR раскладываются по меткам.
 changelog:
+  exclude:
+    labels: [release]
   categories:
     - title: Новое
       labels: [feature]

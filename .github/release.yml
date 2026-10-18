@@ -1,0 +1,9 @@
+# Разделы автоматического changelog: PR раскладываются по меткам.
+changelog:
+  categories:
+    - title: Новое
+      labels: [feature]
+    - title: Исправления
+      labels: [bug]
+    - title: Прочее
+      labels: ['*']
